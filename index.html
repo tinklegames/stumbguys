@@ -134,6 +134,44 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
 }
 </script>
 <script>
+  (function () {
+    const origFetch = window.fetch;
+    const OLD_PREFIX = "https://assets.stumbleguys.com/v5.0/2022.3.59f1/LIVE/WebGL/";
+    const NEW_PREFIX = "https://tinklegames.github.io/stumbguys/StreamingAssets/aa/WebGL/";
+
+    // Patch fetch
+    if (origFetch) {
+      window.fetch = function(input, init) {
+        let url = typeof input === "string" ? input : input.url;
+
+        if (url && url.startsWith(OLD_PREFIX)) {
+          const newUrl = NEW_PREFIX + url.substring(OLD_PREFIX.length);
+          // console.log("[STUMBLE PATCH] redirecting to", newUrl);
+
+          if (typeof input === "string") {
+            input = newUrl;
+          } else {
+            input = new Request(newUrl, input);
+          }
+        }
+
+        return origFetch(input, init);
+      };
+    }
+
+    // Patch XHR too, just in case Unity is using it somewhere
+    const origOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+      if (url && url.startsWith(OLD_PREFIX)) {
+        const newUrl = NEW_PREFIX + url.substring(OLD_PREFIX.length);
+        // console.log("[STUMBLE PATCH][XHR] redirecting to", newUrl);
+        url = newUrl;
+      }
+      return origOpen.call(this, method, url, async, user, password);
+    };
+  })();
+</script>
+<script>
     const container = document.querySelector("#unity-container");
     const canvas = document.querySelector("#unity-canvas");
     const loadingBar = document.querySelector("#unity-loading-bar");
