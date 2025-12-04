@@ -25,33 +25,154 @@
             background: #000;
         }
 
+        /* --- Tinkle-style loader overlay --- */
+        #loader-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 24px;
+            pointer-events: none; /* so clicks go to game once it's ready */
+            z-index: 2000;
+        }
+
+        .loader-panel {
+            pointer-events: auto;
+            width: min(640px, 100%);
+            max-height: 60vh;
+            background: radial-gradient(circle at top left, #414750 0, #1a1b20 55%, #111319 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(211, 165, 16, 0.6);
+            box-shadow:
+                0 0 20px rgba(0, 0, 0, 0.8),
+                0 0 32px rgba(211, 165, 16, 0.35);
+            padding: 14px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        #loader-overlay.loader-hidden .loader-panel {
+            opacity: 0;
+            transform: translateY(18px);
+        }
+
+        .loader-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .loader-title {
+            font-family: "Orbitron", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 15px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #d3a410, #b7870f, #ffe4a1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 6px rgba(211, 165, 16, 0.45));
+            white-space: nowrap;
+        }
+
+        .loader-status {
+            font-size: 12px;
+            color: #f2f2f2;
+            opacity: 0.9;
+            flex: 1;
+            text-align: right;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .loader-log {
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 11px;
+            color: #e4e4e4;
+            line-height: 1.35;
+            overflow-y: auto;
+            max-height: 26vh;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+        }
+
+        .loader-log::-webkit-scrollbar {
+            width: 6px;
+        }
+        .loader-log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .loader-log::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+        }
+
+        .loader-log-line-system {
+            color: #9cc9ff;
+        }
+
+        .loader-log-line-ok {
+            color: #8ee38e;
+        }
+
+        .loader-log-line-warn {
+            color: #ffd27f;
+        }
+
+        .loader-progress-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
         #unity-loading-bar {
-            position: absolute;
-            width: 40%;
-            left: 30%;
-            top: 48%;
-            height: 8px;
-            background: #333;
-            border-radius: 4px;
+            position: relative;
+            width: 100%;
+            height: 10px;
+            background: #262831;
+            border-radius: 999px;
             overflow: hidden;
+            box-shadow:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+                0 0 18px rgba(211, 165, 16, 0.35);
         }
 
         #unity-progress-bar-full {
             width: 0%;
             height: 100%;
-            background: #4caf50;
+            background-image: linear-gradient(90deg, #6e5210, #d3a410, #ffe4a1);
+            box-shadow: 0 0 16px rgba(255, 228, 161, 0.75);
+            border-radius: inherit;
+            transition: width 0.1s ease-out;
         }
 
-        #loading-text {
-            position: absolute;
-            width: 100%;
-            top: 55%;
-            text-align: center;
-            color: #fff;
+        .loader-progress-text {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 12px;
+            color: #f5f5f5;
+            opacity: 0.9;
         }
-    </style>
-    <style>
+
+        #loader-percent {
+            font-weight: 600;
+        }
+
+        #loader-detail {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        /* --- Intro screen --- */
         #intro-screen {
             position: fixed;
             inset: 0;
@@ -321,13 +442,107 @@
 
 <div id="unity-container">
     <canvas id="unity-canvas"></canvas>
-
-    <div id="unity-loading-bar">
-        <div id="unity-progress-bar-full"></div>
-    </div>
-
-    <div id="loading-text">Loading...</div>
 </div>
+
+<!-- Tinkle-style loader overlay -->
+<div id="loader-overlay">
+    <div class="loader-panel">
+        <div class="loader-header">
+            <div class="loader-title">TINKLE LOADER</div>
+            <div class="loader-status" id="loader-status">Booting pipeline…</div>
+        </div>
+        <div class="loader-log" id="loader-log">
+            <!-- log lines injected by JS -->
+        </div>
+        <div class="loader-progress-wrapper">
+            <div id="unity-loading-bar">
+                <div id="unity-progress-bar-full"></div>
+            </div>
+            <div class="loader-progress-text">
+                <span id="loader-percent">0%</span>
+                <span id="loader-detail">Waiting for downloads…</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ---------- Tinkle loader helper (logging + status) ---------- */
+window.TINKLE_LOADER = (function () {
+    const logQueue = [];
+    let elementsReady = false;
+    let loaderLog, loaderStatus, loaderPercent, loaderDetail;
+
+    function initElements() {
+        loaderLog = document.getElementById("loader-log");
+        loaderStatus = document.getElementById("loader-status");
+        loaderPercent = document.getElementById("loader-percent");
+        loaderDetail = document.getElementById("loader-detail");
+
+        elementsReady = !!loaderLog;
+        if (elementsReady && logQueue.length) {
+            logQueue.forEach(item => addLog(item.message, item.kind));
+            logQueue.length = 0;
+        }
+    }
+
+    function addLog(message, kind = "system") {
+        if (!elementsReady) {
+            logQueue.push({ message, kind });
+            return;
+        }
+        if (!loaderLog) return;
+
+        const line = document.createElement("div");
+        const time = new Date().toLocaleTimeString("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+
+        let cssClass = "loader-log-line-system";
+        if (kind === "ok") cssClass = "loader-log-line-ok";
+        else if (kind === "warn") cssClass = "loader-log-line-warn";
+
+        line.className = cssClass;
+        line.textContent = `[${time}] ${message}`;
+        loaderLog.appendChild(line);
+        loaderLog.scrollTop = loaderLog.scrollHeight;
+    }
+
+    function setStatus(text) {
+        if (!elementsReady) {
+            logQueue.push({ message: text, kind: "system" });
+        }
+        if (loaderStatus) loaderStatus.textContent = text;
+    }
+
+    function setProgress(p, detail) {
+        if (loaderPercent) {
+            loaderPercent.textContent = Math.round(p * 100) + "%";
+        }
+        if (loaderDetail && detail) {
+            loaderDetail.textContent = detail;
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initElements);
+    } else {
+        initElements();
+    }
+
+    addLog("Tinkle loader initialized.", "system");
+
+    return {
+        addLog,
+        setStatus,
+        setProgress
+    };
+})();
+</script>
+
 <script>
 // --- universal no-op function ---
 function ddNoop() {}
@@ -395,19 +610,24 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
     };
 }
 </script>
+
 <script>
   (function () {
     const origFetch = window.fetch;
     const OLD_PREFIX = "https://assets.stumbleguys.com/v5.0/2022.3.59f1/LIVE/WebGL/";
     const NEW_PREFIX = "https://tinklegames.github.io/stumbguys/StreamingAssets/aa/WebGL/";
 
-    // Patch fetch
     if (origFetch) {
       window.fetch = function(input, init) {
         let url = typeof input === "string" ? input : input.url;
 
         if (url && url.startsWith(OLD_PREFIX)) {
           const newUrl = NEW_PREFIX + url.substring(OLD_PREFIX.length);
+
+          window.TINKLE_LOADER.addLog(
+            "Redirecting WebGL asset: " + url.substring(OLD_PREFIX.length),
+            "system"
+          );
 
           if (typeof input === "string") {
             input = newUrl;
@@ -424,12 +644,19 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
     XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
       if (url && url.startsWith(OLD_PREFIX)) {
         const newUrl = NEW_PREFIX + url.substring(OLD_PREFIX.length);
+        window.TINKLE_LOADER.addLog(
+          "Redirecting XHR asset: " + url.substring(OLD_PREFIX.length),
+          "system"
+        );
         url = newUrl;
       }
       return origOpen.call(this, method, url, async, user, password);
     };
+
+    window.TINKLE_LOADER.addLog("Asset redirector patched for WebGL StreamingAssets.", "system");
   })();
 </script>
+
 <script>
 (function () {
     const BUNDLE_ORIGIN = 'https://prod-alchemy.web.stumbleguys.com/bundles/';
@@ -443,14 +670,13 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
         }
 
         let tail = url.substring(BUNDLE_ORIGIN.length);
-
         const qIndex = tail.indexOf('?');
         if (qIndex !== -1) {
             tail = tail.substring(0, qIndex);
         }
 
         const newUrl = LOCAL_BUNDLE_PREFIX + tail;
-        // console.log('[Bundle Redirect]', url, '→', newUrl);
+        window.TINKLE_LOADER.addLog("Redirecting bundle: " + tail, "system");
         return newUrl;
     }
 
@@ -474,6 +700,10 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
                 }
             } catch (e) {
                 console.warn('[Bundle Redirect] fetch patch error:', e);
+                window.TINKLE_LOADER.addLog(
+                    "Bundle fetch patch error: " + (e && e.message ? e.message : e),
+                    "warn"
+                );
             }
             return originalFetch.call(this, input, init);
         };
@@ -492,6 +722,10 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
                     return originalOpen.call(this, method, mappedUrl, ...rest);
                 } catch (e) {
                     console.warn('[Bundle Redirect] XHR patch error:', e);
+                    window.TINKLE_LOADER.addLog(
+                        "Bundle XHR patch error: " + (e && e.message ? e.message : e),
+                        "warn"
+                    );
                     return originalOpen.call(this, method, url, ...rest);
                 }
             };
@@ -502,31 +736,56 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
         PatchedXHR.prototype = OriginalXHR.prototype;
         window.XMLHttpRequest = PatchedXHR;
     }
+
+    window.TINKLE_LOADER.addLog("Bundle redirector patched.", "system");
 })();
 </script>
+
 <script>
     const container = document.querySelector("#unity-container");
     const canvas = document.querySelector("#unity-canvas");
-    const loadingBar = document.querySelector("#unity-loading-bar");
     const progressBarFull = document.querySelector("#unity-progress-bar-full");
-    const loadingText = document.querySelector("#loading-text");
 
     function unityShowBanner(msg, type) {
         console.log("[Unity Banner]", type, msg);
+        window.TINKLE_LOADER.addLog("Unity banner [" + type + "]: " + msg,
+            type === "error" ? "warn" : "system"
+        );
     }
 
     function mergeFiles(files) {
+        window.TINKLE_LOADER.setStatus("Downloading game data…");
+        window.TINKLE_LOADER.addLog("Starting WebGL data download (" + files.length + " parts)…", "system");
+
+        let totalBytes = 0;
+
         return Promise.all(
-            files.map(f =>
+            files.map((f, index) =>
                 fetch(f).then(r => {
                     if (!r.ok) {
-                        throw new Error("Failed to fetch " + f + " (" + r.status + ")");
+                        const msg = "Failed to fetch " + f + " (" + r.status + ")";
+                        window.TINKLE_LOADER.addLog(msg, "warn");
+                        throw new Error(msg);
                     }
-                    return r.arrayBuffer();
+                    return r.arrayBuffer().then(buf => {
+                        totalBytes += buf.byteLength;
+                        const mb = (buf.byteLength / (1024 * 1024)).toFixed(2);
+                        window.TINKLE_LOADER.addLog(
+                            "Downloaded " + f.split("/").pop() +
+                            " (" + mb + " MB) [" + (index + 1) + "/" + files.length + "]",
+                            "ok"
+                        );
+                        return buf;
+                    });
                 })
             )
         ).then(buffers => {
+            const totalMB = (totalBytes / (1024 * 1024)).toFixed(2);
+            window.TINKLE_LOADER.addLog("Finished downloading data parts. Total: " + totalMB + " MB", "ok");
+            window.TINKLE_LOADER.setStatus("Merging data blobs…");
+
             const blob = new Blob(buffers);
+            window.TINKLE_LOADER.addLog("Data merged successfully, creating blob URL.", "system");
             return URL.createObjectURL(blob);
         });
     }
@@ -542,9 +801,11 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
 
     const dataParts = getParts("Build/WebGL.data", 37);
 
+    window.TINKLE_LOADER.addLog("Preparing Unity configuration…", "system");
+
     mergeFiles(dataParts).then(dataUrl => {
         const config = {
-            dataUrl: dataUrl,                                     // merged blob URL
+            dataUrl: dataUrl,
             frameworkUrl: "Build/WebGL.framework.js.unityweb",
             codeUrl: "Build/WebGL.wasm.unityweb",
             streamingAssetsUrl: "StreamingAssets",
@@ -564,22 +825,49 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
         const script = document.createElement("script");
         script.src = "Build/WebGL.loader.js";
         script.onload = () => {
+            window.TINKLE_LOADER.setStatus("Launching Unity engine…");
+            window.TINKLE_LOADER.addLog("WebGL.loader.js loaded, creating Unity instance.", "system");
+
             createUnityInstance(canvas, config, progress => {
                 progressBarFull.style.width = (progress * 100) + "%";
+
+                let phase;
+                if (progress < 0.2) phase = "Downloading engine files…";
+                else if (progress < 0.45) phase = "Loading game content…";
+                else if (progress < 0.75) phase = "Initializing game world…";
+                else if (progress < 0.95) phase = "Finalizing startup…";
+                else phase = "Almost ready!";
+
+                window.TINKLE_LOADER.setProgress(progress, phase);
             }).then(unityInstance => {
-                loadingBar.style.display = "none";
-                loadingText.remove();
+                window.TINKLE_LOADER.setStatus("Ready!");
+                window.TINKLE_LOADER.setProgress(1, "Game loaded.");
+                window.TINKLE_LOADER.addLog("Unity instance created successfully. Handing off to game.", "ok");
+
+                const overlay = document.getElementById("loader-overlay");
+                if (overlay) {
+                    overlay.classList.add("loader-hidden");
+                    setTimeout(() => overlay.remove(), 800);
+                }
             }).catch(err => {
                 alert(err);
                 console.error(err);
+                window.TINKLE_LOADER.setStatus("Error starting game.");
+                window.TINKLE_LOADER.addLog("Unity startup error: " + err, "warn");
             });
+        };
+        script.onerror = (e) => {
+            window.TINKLE_LOADER.setStatus("Error loading Unity loader.");
+            window.TINKLE_LOADER.addLog("Failed to load WebGL.loader.js", "warn");
         };
         document.body.appendChild(script);
     }).catch(err => {
-        loadingText.textContent = "Error loading data parts.";
         console.error(err);
+        window.TINKLE_LOADER.setStatus("Error downloading data.");
+        window.TINKLE_LOADER.addLog("Fatal error downloading data parts: " + err, "warn");
     });
 </script>
+
 <script>
   window.addEventListener("load", () => {
     const intro = document.getElementById("intro-screen");
