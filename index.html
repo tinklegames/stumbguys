@@ -771,7 +771,7 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
                         totalBytes += buf.byteLength;
                         const mb = (buf.byteLength / (1024 * 1024)).toFixed(2);
                         window.TINKLE_LOADER.addLog(
-                            "Downloaded " + f.split("/").pop() +
+                            "Loaded " + f.split("/").pop() +
                             " (" + mb + " MB) [" + (index + 1) + "/" + files.length + "]",
                             "ok"
                         );
