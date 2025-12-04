@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Unity WebGL</title>
+    <title>Tinkle Games | Stumble Guys</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
     <style>
@@ -51,8 +51,6 @@
             font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         }
     </style>
-
-    <!-- ✨ Intro-only styles (no changes to original layout/logic) -->
     <style>
         #intro-screen {
             position: fixed;
@@ -161,8 +159,6 @@
     </style>
 </head>
 <body>
-
-<!-- ✨ Intro overlay (only new markup) -->
 <div id="intro-screen">
   <div id="intro-logo-wrapper">
     <div id="intro-title">Tinkle Games</div>
@@ -335,8 +331,6 @@
 <script>
 // --- universal no-op function ---
 function ddNoop() {}
-
-// --- create a safe dummy logger ---
 function makeDummyLogger() {
     return {
         log: ddNoop,
@@ -384,13 +378,12 @@ window.DD_RUM = {
     removeUser: ddNoop,
     startSessionReplayRecording: ddNoop,
     stopSessionReplayRecording: ddNoop,
-    addFeatureFlagEvaluation: ddNoop,     // <-- THIS ONE FIXES YOUR CURRENT ERROR
+    addFeatureFlagEvaluation: ddNoop,
     setRumGlobalContext: ddNoop,
     addRumGlobalContext: ddNoop,
     getInternalContext: ddNoop
 };
 
-// --- Proxy fallback in case game calls unknown DD_RUM/LOGS props ---
 window.DD_LOGS = new Proxy(window.DD_LOGS, {
     get(target, prop) { return target[prop] || ddNoop; }
 });
@@ -415,7 +408,6 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
 
         if (url && url.startsWith(OLD_PREFIX)) {
           const newUrl = NEW_PREFIX + url.substring(OLD_PREFIX.length);
-          // console.log("[STUMBLE PATCH] redirecting to", newUrl);
 
           if (typeof input === "string") {
             input = newUrl;
@@ -428,17 +420,89 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
       };
     }
 
-    // Patch XHR too, just in case Unity is using it somewhere
     const origOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
       if (url && url.startsWith(OLD_PREFIX)) {
         const newUrl = NEW_PREFIX + url.substring(OLD_PREFIX.length);
-        // console.log("[STUMBLE PATCH][XHR] redirecting to", newUrl);
         url = newUrl;
       }
       return origOpen.call(this, method, url, async, user, password);
     };
   })();
+</script>
+<script>
+(function () {
+    const BUNDLE_ORIGIN = 'https://prod-alchemy.web.stumbleguys.com/bundles/';
+    const LOCAL_BUNDLE_PREFIX = 'https://tinklegames.github.io/stumbguys/bundles/';
+
+    function mapBundleUrl(url) {
+        if (typeof url !== 'string') return url;
+
+        if (!url.startsWith(BUNDLE_ORIGIN)) {
+            return url;
+        }
+
+        let tail = url.substring(BUNDLE_ORIGIN.length);
+
+        const qIndex = tail.indexOf('?');
+        if (qIndex !== -1) {
+            tail = tail.substring(0, qIndex);
+        }
+
+        const newUrl = LOCAL_BUNDLE_PREFIX + tail;
+        // console.log('[Bundle Redirect]', url, '→', newUrl);
+        return newUrl;
+    }
+
+    // ---- fetch patch --------------------------------------------------------
+    if (window.fetch) {
+        const originalFetch = window.fetch;
+
+        window.fetch = function (input, init) {
+            try {
+                let url = (typeof input === 'string') ? input : input && input.url;
+
+                const mappedUrl = mapBundleUrl(url);
+
+                if (mappedUrl !== url) {
+                    if (typeof input === 'string') {
+                        return originalFetch.call(this, mappedUrl, init);
+                    } else {
+                        const newRequest = new Request(mappedUrl, input);
+                        return originalFetch.call(this, newRequest, init);
+                    }
+                }
+            } catch (e) {
+                console.warn('[Bundle Redirect] fetch patch error:', e);
+            }
+            return originalFetch.call(this, input, init);
+        };
+    }
+
+    if (window.XMLHttpRequest) {
+        const OriginalXHR = window.XMLHttpRequest;
+
+        function PatchedXHR() {
+            const xhr = new OriginalXHR();
+            const originalOpen = xhr.open;
+
+            xhr.open = function (method, url, ...rest) {
+                try {
+                    const mappedUrl = mapBundleUrl(url);
+                    return originalOpen.call(this, method, mappedUrl, ...rest);
+                } catch (e) {
+                    console.warn('[Bundle Redirect] XHR patch error:', e);
+                    return originalOpen.call(this, method, url, ...rest);
+                }
+            };
+
+            return xhr;
+        }
+
+        PatchedXHR.prototype = OriginalXHR.prototype;
+        window.XMLHttpRequest = PatchedXHR;
+    }
+})();
 </script>
 <script>
     const container = document.querySelector("#unity-container");
@@ -448,11 +512,9 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
     const loadingText = document.querySelector("#loading-text");
 
     function unityShowBanner(msg, type) {
-        // no-op to suppress default banners
         console.log("[Unity Banner]", type, msg);
     }
 
-    // ---- Split-data helpers ----
     function mergeFiles(files) {
         return Promise.all(
             files.map(f =>
@@ -478,12 +540,9 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
         return parts;
     }
 
-    // We have WebGL.data.part000 → WebGL.data.part036 (37 parts)
     const dataParts = getParts("Build/WebGL.data", 37);
 
-    // First, merge the data parts into one blob URL
     mergeFiles(dataParts).then(dataUrl => {
-        // Unity config: wasm & framework are NOT split, served normally
         const config = {
             dataUrl: dataUrl,                                     // merged blob URL
             frameworkUrl: "Build/WebGL.framework.js.unityweb",
@@ -495,7 +554,6 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
             showBanner: unityShowBanner
         };
 
-        // Mobile viewport fix
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
             const meta = document.createElement("meta");
             meta.name = "viewport";
@@ -503,7 +561,6 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
             document.head.appendChild(meta);
         }
 
-        // Load Unity loader
         const script = document.createElement("script");
         script.src = "Build/WebGL.loader.js";
         script.onload = () => {
@@ -523,8 +580,6 @@ if (typeof window.dispatchReactUnityEvent !== "function") {
         console.error(err);
     });
 </script>
-
-<!-- ✨ Intro hide script (only affects intro) -->
 <script>
   window.addEventListener("load", () => {
     const intro = document.getElementById("intro-screen");
