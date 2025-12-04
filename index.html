@@ -64,26 +64,27 @@
     <div id="loading-text">Loading...</div>
 </div>
 <script>
-window.DD_LOGS = {
-    init: function () {},
-    logger: {
+function makeDummyLogger() {
+    return {
         log: function () {},
         debug: function () {},
         info: function () {},
         warn: function () {},
-        error: function () {}
-    },
+        error: function () {},
+        setHandler: function () {}, // <- this fixes your error
+        setLevel: function () {}    // <- in case they call this too
+    };
+}
+
+window.DD_LOGS = {
+    init: function () {},
+    logger: makeDummyLogger(),
     createLogger: function () {
-        return {
-            log: function () {},
-            debug: function () {},
-            info: function () {},
-            warn: function () {},
-            error: function () {}
-        };
+        return makeDummyLogger();
     }
 };
 </script>
+
 
 <script>
     const container = document.querySelector("#unity-container");
