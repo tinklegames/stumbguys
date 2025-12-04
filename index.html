@@ -63,6 +63,27 @@
 
     <div id="loading-text">Loading...</div>
 </div>
+<script>
+window.DD_LOGS = {
+    init: function () {},
+    logger: {
+        log: function () {},
+        debug: function () {},
+        info: function () {},
+        warn: function () {},
+        error: function () {}
+    },
+    createLogger: function () {
+        return {
+            log: function () {},
+            debug: function () {},
+            info: function () {},
+            warn: function () {},
+            error: function () {}
+        };
+    }
+};
+</script>
 
 <script>
     const container = document.querySelector("#unity-container");
