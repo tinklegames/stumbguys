@@ -6,17 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
     <style>
-        body, html {
+        html, body {
             margin: 0;
             padding: 0;
             overflow: hidden;
             background: #000;
+            height: 100%;
         }
 
         #unity-container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
+            position: fixed;
+            inset: 0;
         }
 
         #unity-canvas {
@@ -47,12 +47,11 @@
             width: 100%;
             top: 55%;
             text-align: center;
-            color: white;
-            font-family: sans-serif;
+            color: #fff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         }
     </style>
 </head>
-
 <body>
 
 <div id="unity-container">
@@ -72,12 +71,22 @@
     const progressBarFull = document.querySelector("#unity-progress-bar-full");
     const loadingText = document.querySelector("#loading-text");
 
-    function unityShowBanner(msg, type) {}
+    function unityShowBanner(msg, type) {
+        // no-op to suppress default banners
+        console.log("[Unity Banner]", type, msg);
+    }
 
-    // --- Merge data parts ---
+    // ---- Split-data helpers ----
     function mergeFiles(files) {
         return Promise.all(
-            files.map(f => fetch(f).then(r => r.arrayBuffer()))
+            files.map(f =>
+                fetch(f).then(r => {
+                    if (!r.ok) {
+                        throw new Error("Failed to fetch " + f + " (" + r.status + ")");
+                    }
+                    return r.arrayBuffer();
+                })
+            )
         ).then(buffers => {
             const blob = new Blob(buffers);
             return URL.createObjectURL(blob);
@@ -87,40 +96,35 @@
     function getParts(base, count) {
         const parts = [];
         for (let i = 0; i < count; i++) {
-            parts.push(`${base}.part${String(i).padStart(3, "0")}`);
+            const idx = String(i).padStart(3, "0"); // 000, 001, ...
+            parts.push(`${base}.part${idx}`);
         }
         return parts;
     }
 
-    // --- MAIN STARTUP ---
-    const dataParts = getParts("Build/WebGL.data", 37); // part000 → part036
+    // We have WebGL.data.part000 → WebGL.data.part036 (37 parts)
+    const dataParts = getParts("Build/WebGL.data", 37);
 
-    Promise.all([
-        mergeFiles(dataParts),             // merged data file
-        fetch("Build/WebGL.wasm.unityweb").then(r => r.blob()).then(b => URL.createObjectURL(b))
-    ])
-    .then(([dataUrl, wasmUrl]) => {
-
+    // First, merge the data parts into one blob URL
+    mergeFiles(dataParts).then(dataUrl => {
+        // Unity config: wasm & framework are NOT split, served normally
         const config = {
-            dataUrl: dataUrl,
+            dataUrl: dataUrl,                                     // merged blob URL
             frameworkUrl: "Build/WebGL.framework.js.unityweb",
-            codeUrl: wasmUrl,
+            codeUrl: "Build/WebGL.wasm.unityweb",
             streamingAssetsUrl: "StreamingAssets",
-            companyName: "Company",
+            companyName: "MangledMaw",
             productName: "WebGL Game",
             productVersion: "1.0",
             showBanner: unityShowBanner
         };
 
-        // Mobile fix
+        // Mobile viewport fix
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            var meta = document.createElement('meta');
-            meta.name = 'viewport';
-            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no';
+            const meta = document.createElement("meta");
+            meta.name = "viewport";
+            meta.content = "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no";
             document.head.appendChild(meta);
-
-            canvas.style.width = "100%";
-            canvas.style.height = "100%";
         }
 
         // Load Unity loader
@@ -128,13 +132,19 @@
         script.src = "Build/WebGL.loader.js";
         script.onload = () => {
             createUnityInstance(canvas, config, progress => {
-                progressBarFull.style.width = `${progress * 100}%`;
-            }).then(() => {
+                progressBarFull.style.width = (progress * 100) + "%";
+            }).then(unityInstance => {
                 loadingBar.style.display = "none";
                 loadingText.remove();
-            }).catch(alert);
+            }).catch(err => {
+                alert(err);
+                console.error(err);
+            });
         };
         document.body.appendChild(script);
+    }).catch(err => {
+        loadingText.textContent = "Error loading data parts.";
+        console.error(err);
     });
 </script>
 
