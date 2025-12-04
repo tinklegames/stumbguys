@@ -64,42 +64,70 @@
     <div id="loading-text">Loading...</div>
 </div>
 <script>
+// --- universal no-op function ---
+function ddNoop() {}
+
+// --- create a safe dummy logger ---
 function makeDummyLogger() {
     return {
-        log: function () {},
-        debug: function () {},
-        info: function () {},
-        warn: function () {},
-        error: function () {},
-        setHandler: function () {},  // used by game
-        setLevel: function () {}     // maybe used
+        log: ddNoop,
+        debug: ddNoop,
+        info: ddNoop,
+        warn: ddNoop,
+        error: ddNoop,
+        setHandler: ddNoop,
+        getHandler: ddNoop,
+        setLevel: ddNoop,
+        getLevel: ddNoop,
+        addContext: ddNoop,
+        removeContext: ddNoop
     };
 }
 
-// Datadog Logs stub
+// --- Fallback proxy to catch unexpected calls ---
+const ddProxy = new Proxy(ddNoop, {
+    get(target, prop) { return ddNoop; },
+    apply(target, thisArg, args) { return undefined; }
+});
+
+// ------------------------------
+//        DD_LOGS STUB
+// ------------------------------
 window.DD_LOGS = {
-    init: function () {},
+    init: ddNoop,
     logger: makeDummyLogger(),
-    createLogger: function () {
-        return makeDummyLogger();
-    }
+    createLogger: function () { return makeDummyLogger(); },
+    addLoggerGlobalContext: ddNoop,
+    removeLoggerGlobalContext: ddNoop
 };
 
-// Datadog RUM stub
+// ------------------------------
+//        DD_RUM STUB
+// ------------------------------
 window.DD_RUM = {
-    init: function () {},
-    addAction: function () {},
-    addError: function () {},
-    addTiming: function () {},
-    startView: function () {},
-    stopSession: function () {},
-    startSessionReplayRecording: function () {},
-    stopSessionReplayRecording: function () {},
-    setUser: function () {},
-    removeUser: function () {},
-    setRumGlobalContext: function () {},
-    addRumGlobalContext: function () {}
+    init: ddNoop,
+    addAction: ddNoop,
+    addError: ddNoop,
+    addTiming: ddNoop,
+    startView: ddNoop,
+    stopSession: ddNoop,
+    setUser: ddNoop,
+    removeUser: ddNoop,
+    startSessionReplayRecording: ddNoop,
+    stopSessionReplayRecording: ddNoop,
+    addFeatureFlagEvaluation: ddNoop,     // <-- THIS ONE FIXES YOUR CURRENT ERROR
+    setRumGlobalContext: ddNoop,
+    addRumGlobalContext: ddNoop,
+    getInternalContext: ddNoop
 };
+
+// --- Proxy fallback in case game calls unknown DD_RUM/LOGS props ---
+window.DD_LOGS = new Proxy(window.DD_LOGS, {
+    get(target, prop) { return target[prop] || ddNoop; }
+});
+window.DD_RUM = new Proxy(window.DD_RUM, {
+    get(target, prop) { return target[prop] || ddNoop; }
+});
 </script>
 <script>
     const container = document.querySelector("#unity-container");
