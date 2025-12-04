@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Unity WebGL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #unity-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #unity-canvas {
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        #unity-loading-bar {
+            position: absolute;
+            width: 40%;
+            left: 30%;
+            top: 48%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #unity-progress-bar-full {
+            width: 0%;
+            height: 100%;
+            background: #4caf50;
+        }
+
+        #loading-text {
+            position: absolute;
+            width: 100%;
+            top: 55%;
+            text-align: center;
+            color: white;
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="unity-container">
+    <canvas id="unity-canvas"></canvas>
+
+    <div id="unity-loading-bar">
+        <div id="unity-progress-bar-full"></div>
+    </div>
+
+    <div id="loading-text">Loading...</div>
+</div>
+
+<script>
+    const container = document.querySelector("#unity-container");
+    const canvas = document.querySelector("#unity-canvas");
+    const loadingBar = document.querySelector("#unity-loading-bar");
+    const progressBarFull = document.querySelector("#unity-progress-bar-full");
+    const loadingText = document.querySelector("#loading-text");
+
+    function unityShowBanner(msg, type) {}
+
+    // --- Merge data parts ---
+    function mergeFiles(files) {
+        return Promise.all(
+            files.map(f => fetch(f).then(r => r.arrayBuffer()))
+        ).then(buffers => {
+            const blob = new Blob(buffers);
+            return URL.createObjectURL(blob);
+        });
+    }
+
+    function getParts(base, count) {
+        const parts = [];
+        for (let i = 0; i < count; i++) {
+            parts.push(`${base}.part${String(i).padStart(3, "0")}`);
+        }
+        return parts;
+    }
+
+    // --- MAIN STARTUP ---
+    const dataParts = getParts("Build/WebGL.data", 37); // part000 → part036
+
+    Promise.all([
+        mergeFiles(dataParts),             // merged data file
+        fetch("Build/WebGL.wasm.unityweb").then(r => r.blob()).then(b => URL.createObjectURL(b))
+    ])
+    .then(([dataUrl, wasmUrl]) => {
+
+        const config = {
+            dataUrl: dataUrl,
+            frameworkUrl: "Build/WebGL.framework.js.unityweb",
+            codeUrl: wasmUrl,
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "Company",
+            productName: "WebGL Game",
+            productVersion: "1.0",
+            showBanner: unityShowBanner
+        };
+
+        // Mobile fix
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no';
+            document.head.appendChild(meta);
+
+            canvas.style.width = "100%";
+            canvas.style.height = "100%";
+        }
+
+        // Load Unity loader
+        const script = document.createElement("script");
+        script.src = "Build/WebGL.loader.js";
+        script.onload = () => {
+            createUnityInstance(canvas, config, progress => {
+                progressBarFull.style.width = `${progress * 100}%`;
+            }).then(() => {
+                loadingBar.style.display = "none";
+                loadingText.remove();
+            }).catch(alert);
+        };
+        document.body.appendChild(script);
+    });
+</script>
+
+</body>
+</html>
