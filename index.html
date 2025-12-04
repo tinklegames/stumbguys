@@ -71,11 +71,12 @@ function makeDummyLogger() {
         info: function () {},
         warn: function () {},
         error: function () {},
-        setHandler: function () {}, // <- this fixes your error
-        setLevel: function () {}    // <- in case they call this too
+        setHandler: function () {},  // used by game
+        setLevel: function () {}     // maybe used
     };
 }
 
+// Datadog Logs stub
 window.DD_LOGS = {
     init: function () {},
     logger: makeDummyLogger(),
@@ -83,9 +84,23 @@ window.DD_LOGS = {
         return makeDummyLogger();
     }
 };
+
+// Datadog RUM stub
+window.DD_RUM = {
+    init: function () {},
+    addAction: function () {},
+    addError: function () {},
+    addTiming: function () {},
+    startView: function () {},
+    stopSession: function () {},
+    startSessionReplayRecording: function () {},
+    stopSessionReplayRecording: function () {},
+    setUser: function () {},
+    removeUser: function () {},
+    setRumGlobalContext: function () {},
+    addRumGlobalContext: function () {}
+};
 </script>
-
-
 <script>
     const container = document.querySelector("#unity-container");
     const canvas = document.querySelector("#unity-canvas");
