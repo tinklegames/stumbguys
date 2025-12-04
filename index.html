@@ -128,6 +128,10 @@ window.DD_LOGS = new Proxy(window.DD_LOGS, {
 window.DD_RUM = new Proxy(window.DD_RUM, {
     get(target, prop) { return target[prop] || ddNoop; }
 });
+if (typeof window.dispatchReactUnityEvent !== "function") {
+    window.dispatchReactUnityEvent = function(eventName, payload) {
+    };
+}
 </script>
 <script>
     const container = document.querySelector("#unity-container");
